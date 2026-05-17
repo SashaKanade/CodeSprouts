@@ -28,88 +28,85 @@
     }
   });
 
-  function getSelectedInterests(form) {
-    return Array.from(form.querySelectorAll('input[name="interests"]:checked')).map(
-      (el) => el.value
-    );
-  }
-
-  function showFormSuccess(form, message) {
-    const successEl = form.parentElement.querySelector(".form-success");
-    if (successEl) {
-      const msgEl = successEl.querySelector("[data-success-message]");
-      if (msgEl) msgEl.textContent = message;
-      form.hidden = true;
-      successEl.classList.add("visible");
-    }
-  }
-
+  // Formspree submission handler
   document.querySelectorAll("[data-signup-form]").forEach((form) => {
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const type = form.dataset.signupForm;
-      const interests = getSelectedInterests(form);
+      const interests = Array.from(form.querySelectorAll('input[name="interests"]:checked')).map(el => el.value);
 
       if (interests.length === 0) {
         const interestsGroup = form.querySelector(".interests-grid");
         if (interestsGroup) {
           interestsGroup.scrollIntoView({ behavior: "smooth", block: "center" });
-          interestsGroup.style.outline = "2px solid var(--pink-500)";
-          setTimeout(() => {
-            interestsGroup.style.outline = "";
-          }, 2000);
+          interestsGroup.style.outline = "2px solid rgba(255,255,255,0.8)";
+          setTimeout(() => { interestsGroup.style.outline = ""; }, 2000);
         }
         return;
       }
 
-      const payload = {
-        type,
+      const submitBtn = form.querySelector("[type=submit]");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting…";
+      }
+
+      const data = {
+        formType: type,
         fullName: form.fullName.value.trim(),
         email: form.email.value.trim(),
         phone: form.phone.value.trim(),
-        interests,
+        interests: interests.join(", "),
         questions: form.questions.value.trim(),
-        submittedAt: new Date().toISOString(),
       };
 
-      const storageKey = `codesprouts_${type}_signups`;
-      const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
-      existing.push(payload);
-      localStorage.setItem(storageKey, JSON.stringify(existing));
+      try {
+        const res = await fetch("https://formspree.io/f/xjgzbobr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      const messages = {
-        member: "Welcome to CodeSprouts! We'll be in touch soon with next steps for members.",
-        tutoring: "Your tutoring request has been received. A coordinator will match you with a tutor shortly.",
-        tutor: "Thank you for applying to tutor! Our team will review your application and reach out via email.",
-      };
-
-      showFormSuccess(form, messages[type] || "Thank you for signing up!");
-      form.reset();
+        if (res.ok) {
+          const successEl = form.parentElement.querySelector(".form-success");
+          if (successEl) {
+            const msgEl = successEl.querySelector("[data-success-message]");
+            const messages = {
+              member: "Welcome to CodeSprouts! We'll be in touch soon with next steps.",
+              tutoring: "Your tutoring request has been received. We'll match you with a tutor shortly.",
+              tutor: "Thank you for applying to tutor! Our team will review your application and reach out via email.",
+            };
+            if (msgEl) msgEl.textContent = messages[type] || "Thank you for signing up!";
+            form.hidden = true;
+            successEl.classList.add("visible");
+          }
+        } else {
+          alert("Something went wrong. Please try again.");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitBtn.dataset.label || "Submit";
+          }
+        }
+      } catch (err) {
+        alert("Network error. Please check your connection and try again.");
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = submitBtn.dataset.label || "Submit";
+        }
+      }
     });
   });
-})();
 
-(function () {
+  // Hide header on scroll down, show on scroll up (desktop only)
   var header = document.querySelector(".site-header");
-  if (!header) return;
-
-  // Only apply on desktop where header is sticky
-  if (window.innerWidth <= 900) return;
-
-  var lastY = window.scrollY;
-
-  window.addEventListener("scroll", function () {
-    var y = window.scrollY;
-    if (y > 80 && y > lastY) {
-      // Scrolling down — hide
-      header.style.transform = "translateY(-100%)";
+  if (header && window.innerWidth > 900) {
+    var lastY = window.scrollY;
+    window.addEventListener("scroll", function () {
+      var y = window.scrollY;
       header.style.transition = "transform 0.3s ease";
-    } else {
-      // Scrolling up — show
-      header.style.transform = "translateY(0)";
-      header.style.transition = "transform 0.3s ease";
-    }
-    lastY = y;
-  }, { passive: true });
+      header.style.transform = (y > 80 && y > lastY) ? "translateY(-100%)" : "translateY(0)";
+      lastY = y;
+    }, { passive: true });
+  }
 })();
