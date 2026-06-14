@@ -17,7 +17,8 @@ Hosted via GitHub Pages at: `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`
 | `tutoring.html` | Tutoring request form |
 | `become-tutor.html` | Volunteer tutor application form |
 | `resources.html` | Curated math and CS learning resources |
-
+| `become-chapter.html` | Chapter creation form |
+| `summerinternship.html` | Summer internship form |
 ---
 
 ## Project Structure
